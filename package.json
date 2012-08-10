@@ -1,0 +1,10 @@
+{
+	"name": "better-pinboard-rss",
+	"description": "better rss feeds for pinboard",
+	"version": "0.0.1",
+	"private": true,
+	"dependencies": {
+		"express": "3.x",
+		"rss": ">= 0.0.3"
+	}
+}
