@@ -2,6 +2,9 @@ var express = require('express');
 var RSS = require('rss');
 var http = require('http');
 var _ = require('underscore');
+var async = require('async');
+
+var diffbotAPIKey = 'e6366ac27635f24e1f2ed901b950ed04';
 
 app = express();
 app.listen(4243);
@@ -27,27 +30,65 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
                console.log('got data');
                var articles = JSON.parse(body);
 
-               var feed = new RSS({
-                   title: 'Pinboard – network items for ' + req.params.username,
-                   description: 'bookmarks from your network',
-                   feed_url: 'http://example.com/rss.xml',
-                   site_url: 'http://pinboard.in/'
-               });
+               async.forEach(articles, function(article, next) {
+                   var url = 'http://www.diffbot.com/api/article' +
+                       '?token=' + diffbotAPIKey +
+                       '&url=' + encodeURIComponent(article.u) +
+                       '&html=true';
 
-               _.each(articles, function(article) {
-                   console.dir(article);
+                   http.get(url, function(diffbotRes) {
+                       var body = '';
 
-                   feed.item({
-                       title:  article.d,
-                       description: article.d,
-                       url: article.u,
-                       guid: article.u + '-' + article.a,
-                       author: article.a,
-                       date: article.dt
+                       if (diffbotRes.statusCode != 200) {
+                           console.dir(diffbotRes);
+                           next();
+                           return;
+                       }
+
+                       diffbotRes.on('data', function(chunk) {
+                           body += chunk;
+                       });
+
+                       diffbotRes.on('end', function() {
+                           console.log('response from diffbot');
+                           var diffbotArticle = JSON.parse(body);
+
+                           article.full = diffbotArticle;
+
+                           next();
+                       });
                    });
-               });
+               }, function(err) {
 
-               res.send(feed.xml());
+                   var feed = new RSS({
+                       title: 'Pinboard – network items for ' + req.params.username,
+                       description: 'bookmarks from your network',
+                       feed_url: 'http://example.com/rss.xml',
+                       site_url: 'http://pinboard.in/'
+                   });
+
+                   _.each(articles, function(article) {
+                       console.dir(article);
+
+                       var body = '<h1>' + (article.full.icon ? '<img src="' + article.full.icon + '">' : '') +
+                           article.full.title + '</h1>' + article.full.html;
+
+                       if (article.n) {
+                           body = article.n + '<hr>' + body;
+                       }
+
+                       feed.item({
+                           title:  article.d,
+                           description: body,
+                           url: article.u,
+                           guid: article.u + '-' + article.a,
+                           author: article.a,
+                           date: article.dt
+                       });
+                   });
+
+                   res.send(feed.xml());
+               });
            }
         });
     });
