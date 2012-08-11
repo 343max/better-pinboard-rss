@@ -41,6 +41,9 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
 
     http.get(url, function(pinRes) {
         console.log('Status: ' + pinRes.statusCode);
+        if (pinRes.headers.etag) {
+            res.set('ETag', pinRes.headers.etag);
+        }
 
         var body = '';
 
@@ -74,7 +77,6 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
                                 var body = '';
 
                                 if (diffbotRes.statusCode != 200) {
-                                    console.dir(diffbotRes);
                                     next();
                                     return;
                                 }
@@ -105,18 +107,17 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
 
 
                }, function(err) {
-
                    var feed = new RSS({
                        title: 'Pinboard – network items for ' + req.params.username,
                        description: 'bookmarks from your network',
-                       feed_url: 'http://example.com/rss.xml',
+                       feed_url: 'http://' + req.headers.host + req.url,
                        site_url: 'http://pinboard.in/'
                    });
 
                    _.each(articles, function(article) {
-                       console.dir(article);
+//                       console.dir(article);
 
-                       var body = '<h1>' + (article.full.icon ? '<img src="' + article.full.icon + '">' : '') +
+                       var body = '<h1>' + (article.full.icon ? '<img width="16" height="16" src="' + article.full.icon + '">' : '') +
                            article.full.title + '</h1>' + article.full.html;
 
                        if (article.n) {
@@ -133,6 +134,7 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
                        });
                    });
 
+                   res.set('Content-Type', 'application/rss+xml');
                    res.send(feed.xml());
                });
            }
