@@ -117,7 +117,7 @@ app.get('/rss/secret::secret/u::username/network/', function (req, res) {
                    _.each(articles, function(article) {
 //                       console.dir(article);
 
-                       var body = '<h1>' + (article.full.icon ? '<img width="16" height="16" src="' + article.full.icon + '">' : '') +
+                       var body = (article.full.icon ? '<img style="float: left;" src="' + article.full.icon + '">' : '') + '<h1>' +
                            article.full.title + '</h1>' + article.full.html;
 
                        if (article.n) {
